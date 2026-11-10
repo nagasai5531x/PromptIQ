@@ -1,0 +1,38 @@
+# Node modules & builds
+node_modules/
+dist/
+dist-ssr/
+.output/
+.nitro/
+.wrangler/
+.vite-temp/
+.vinxi/
+
+# Environment files & secrets (NEVER commit secrets to GitHub)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+!.env.example
+
+# SQLite Database & Storage
+data/*.db
+data/*.db-wal
+data/*.db-shm
+*.db
+*.sqlite
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

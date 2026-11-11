@@ -9,15 +9,34 @@ let dbInstance: DatabaseSync | null = null;
 export function getDb(): DatabaseSync {
   if (dbInstance) return dbInstance;
 
-  const dataDir = path.resolve(process.cwd(), "data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  let dbPath = ":memory:";
+  try {
+    const dataDir = path.resolve(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    dbPath = path.join(dataDir, "promptiq.db");
+  } catch (err) {
+    console.warn("Could not create project data directory, attempting /tmp fallback:", err);
+    try {
+      const tmpDir = path.resolve("/tmp", "promptiq-data");
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      dbPath = path.join(tmpDir, "promptiq.db");
+    } catch (tmpErr) {
+      console.warn("Could not create /tmp fallback, defaulting to :memory: SQLite:", tmpErr);
+      dbPath = ":memory:";
+    }
   }
 
-  const dbPath = path.join(dataDir, "promptiq.db");
   const db = new DatabaseSync(dbPath);
-  db.exec("PRAGMA journal_mode = WAL;");
-  db.exec("PRAGMA foreign_keys = ON;");
+  try {
+    db.exec("PRAGMA journal_mode = WAL;");
+    db.exec("PRAGMA foreign_keys = ON;");
+  } catch (pragmaErr) {
+    console.warn("Pragma setup warning:", pragmaErr);
+  }
 
   initSchema(db);
   runMigrations(db);

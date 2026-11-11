@@ -67,7 +67,7 @@ import {
 import { LIBRARY } from "@/lib/library";
 import { scanPrompt, sanitizeSecrets, type SecurityReport } from "@/lib/security";
 import { useLang } from "@/lib/i18n";
-import { SiteHeader } from "@/components/SiteHeader";
+import { PromptIQLayout } from "@/components/PromptIQLayout";
 
 function FeaturePage({
   title,
@@ -79,16 +79,9 @@ function FeaturePage({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 pb-16">
-        <div className="border-b border-border py-8">
-          <h1 className="font-display text-3xl font-extrabold md:text-4xl">{title}</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <div className="py-8">{children}</div>
-      </main>
-    </div>
+    <PromptIQLayout title={title} subtitle={subtitle}>
+      {children}
+    </PromptIQLayout>
   );
 }
 

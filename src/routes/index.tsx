@@ -46,7 +46,7 @@ import { addHistory, takePending } from "@/lib/history";
 import { scanPrompt, sanitizeSecrets } from "@/lib/security";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth.context";
-import { SiteHeader } from "@/components/SiteHeader";
+import { PromptIQLayout } from "@/components/PromptIQLayout";
 import { Globe, Languages, CheckCheck, BookOpen, Sparkles as SparklesIcon } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -308,18 +308,16 @@ function Index() {
   const afterPromptForComparison = improvedPrompt || (ai?.ok ? ai.improvedPrompt : "");
 
   return (
-    <div className="min-h-screen bg-background font-sans">
-      <SiteHeader />
-
-      <section className="bg-soft-glow">
-        <div className="mx-auto max-w-3xl px-4 pb-8 pt-10 text-center">
+    <PromptIQLayout>
+      <div className="mx-auto max-w-6xl space-y-8">
+        <section className="rounded-2xl border border-border bg-soft-glow/50 p-6 text-center sm:p-8">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Sparkles className="h-3.5 w-3.5" /> {t.hero_badge}
           </span>
-          <h1 className="mt-4 font-display text-4xl font-extrabold tracking-tight md:text-5xl">
+          <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight md:text-4xl">
             {t.hero_title_a} <span className="text-brand">{t.hero_title_b}</span> {t.hero_title_c}
           </h1>
-          <p className="mt-4 text-sm text-muted-foreground">{t.hero_sub}</p>
+          <p className="mt-3 text-xs text-muted-foreground sm:text-sm">{t.hero_sub}</p>
 
           {/* Mode switch tabs */}
           <div className="mt-6 inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
@@ -356,10 +354,9 @@ function Index() {
               )}
             </button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <main id="checker" className="mx-auto max-w-6xl px-4 pb-16">
+        <div id="checker">
         {viewMode === "checker" ? (
           <div className="grid gap-6 lg:grid-cols-5">
             {/* Editor */}
@@ -916,13 +913,12 @@ function Index() {
             />
           </section>
         )}
-      </main>
+        </div>
 
-      <section id="how" className="border-t border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="font-display text-3xl font-extrabold">{t.how}</h2>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t.how_sub}</p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section id="how" className="rounded-2xl border border-border bg-card p-6 md:p-8">
+          <h2 className="font-display text-2xl font-extrabold">{t.how}</h2>
+          <p className="mt-2 text-xs text-muted-foreground sm:text-sm">{t.how_sub}</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
               ["Clarity", 20, "Action verb, sentence length, vague words."],
               ["Specificity", 25, "Length, numbers, named terms, category keywords."],
@@ -937,10 +933,10 @@ function Index() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <footer className="py-6 text-center text-xs text-muted-foreground">{t.footer}</footer>
-    </div>
+        <footer className="py-4 text-center text-xs text-muted-foreground">{t.footer}</footer>
+      </div>
+    </PromptIQLayout>
   );
 }

@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   LogIn,
   UserPlus,
+  FileText,
 } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth.context";
@@ -85,6 +86,7 @@ export function PromptIQLayout({
       items: [
         { to: "/evaluator", label: t.nav_evaluator, icon: Layers, badge: "AI" },
         { to: "/ab-test", label: t.nav_ab, icon: GitBranch },
+        { to: "/test-inputs", label: "Test Inputs", icon: FileText },
       ],
     },
     {
@@ -209,9 +211,17 @@ export function PromptIQLayout({
 
       {/* Main SaaS Shell: Sidebar + Content */}
       <div className="flex">
-        {/* Left Sidebar */}
+        {/* Mobile backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-background/80 backdrop-blur-sm md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Left Sidebar (Sticky on Desktop) */}
         <aside
-          className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-border bg-card pt-16 transition-transform duration-300 md:static md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-30 flex w-64 shrink-0 flex-col border-r border-border bg-card transition-transform duration-300 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:translate-x-0 pt-16 md:pt-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -224,7 +234,7 @@ export function PromptIQLayout({
                 <nav className="space-y-0.5">
                   {group.items.map((item) => {
                     const Icon = item.icon;
-                    const isActive = currentPath === item.to;
+                    const isActive = item.to === "/" ? currentPath === "/" : currentPath === item.to || currentPath.startsWith(item.to + "/");
                     return (
                       <Link
                         key={item.to}

@@ -17,6 +17,7 @@ import "../styles.css";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { LangProvider } from "../lib/i18n";
 import { AuthProvider, useAuth } from "../lib/auth.context";
+import { ThemeProvider } from "../lib/theme.context";
 
 const PUBLIC_ROUTES = ["/login", "/register"];
 
@@ -147,9 +148,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('piq_theme');
+                  if (stored === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.style.colorScheme = 'light';
+                  } else {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                  }
+                } catch(e) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body>
         {children}
@@ -164,14 +185,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LangProvider>
-        <AuthProvider>
-          <AuthGuard>
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </AuthGuard>
-        </AuthProvider>
-      </LangProvider>
+      <ThemeProvider>
+        <LangProvider>
+          <AuthProvider>
+            <AuthGuard>
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+            </AuthGuard>
+          </AuthProvider>
+        </LangProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

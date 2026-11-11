@@ -1,13 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Gauge, Menu, X, Languages, LayoutDashboard, LogOut, LogIn, User } from "lucide-react";
+import { Gauge, Menu, X, Languages, LayoutDashboard, LogOut, LogIn, User, Sun, Moon } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth.context";
+import { useTheme } from "@/lib/theme.context";
 import { Button } from "@/components/ui/button";
 
 export function SiteHeader() {
   const { t, lang, setLang } = useLang();
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
 
@@ -56,6 +58,25 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
+          >
+            {theme === "dark" ? (
+              <>
+                <Sun className="h-3.5 w-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Dark</span>
+              </>
+            )}
+          </Button>
           {langBtn}
           {isAuthenticated ? (
             <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-border">

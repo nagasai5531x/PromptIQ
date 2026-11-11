@@ -28,9 +28,12 @@ import {
   LogIn,
   UserPlus,
   FileText,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth.context";
+import { useTheme } from "@/lib/theme.context";
 import { Button } from "@/components/ui/button";
 
 export function PromptIQLayout({
@@ -44,6 +47,7 @@ export function PromptIQLayout({
 }) {
   const { t, lang, setLang } = useLang();
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const routerState = useRouterState();
@@ -153,12 +157,32 @@ export function PromptIQLayout({
         </div>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="h-8 gap-1.5 px-2.5 text-xs font-semibold transition hover:border-primary/50"
+          >
+            {theme === "dark" ? (
+              <>
+                <Sun className="h-3.5 w-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Dark</span>
+              </>
+            )}
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => setLang(lang === "en" ? "te" : "en")}
-            className="text-xs"
+            className="h-8 text-xs font-semibold"
           >
             <Languages className="h-3.5 w-3.5" />
             {lang === "en" ? "తెలుగు" : "English"}

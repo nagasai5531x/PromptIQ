@@ -15,10 +15,10 @@ export type ModelConfig = {
 };
 
 export const AVAILABLE_MODELS: ModelConfig[] = [
-  { id: "groq-llama-70b", name: "Llama 3.3 70B", provider: "groq", modelKey: "llama-3.3-70b-versatile", badge: "Flagship" },
-  { id: "groq-llama-8b", name: "Llama 3.1 8B", provider: "groq", modelKey: "llama-3.1-8b-instant", badge: "Ultra Fast" },
-  { id: "groq-mixtral", name: "Mixtral 8x7B", provider: "groq", modelKey: "mixtral-8x7b-32768", badge: "MoE" },
-  { id: "groq-gemma", name: "Gemma 2 9B", provider: "groq", modelKey: "gemma2-9b-it", badge: "Google" },
+  { id: "groq-gpt-120b", name: "GPT-OSS 120B", provider: "groq", modelKey: "openai/gpt-oss-120b", badge: "Flagship" },
+  { id: "groq-gpt-20b", name: "GPT-OSS 20B", provider: "groq", modelKey: "openai/gpt-oss-20b", badge: "Ultra Fast" },
+  { id: "groq-qwen", name: "Qwen 3.8 27B", provider: "groq", modelKey: "qwen/qwen3.8-27b", badge: "Qwen" },
+  { id: "groq-llama-70b", name: "Llama 3.3 70B", provider: "groq", modelKey: "llama-3.3-70b-versatile", badge: "Meta" },
   { id: "openai-gpt4o", name: "GPT-4o", provider: "openai", modelKey: "gpt-4o", badge: "OpenAI" },
   { id: "gemini-flash", name: "Gemini 1.5 Flash", provider: "gemini", modelKey: "gemini-1.5-flash", badge: "Gemini" },
 ];
@@ -77,7 +77,7 @@ export const runMultiModelComparison = createServerFn({ method: "POST" })
     const rawList = raw["selectedModelIds"] || raw["selectedModels"] || raw["models"];
     const fallbackList = Array.isArray(rawList) && rawList.length > 0
       ? rawList.map(String)
-      : ["groq-llama-70b", "groq-llama-8b", "groq-mixtral"];
+      : ["groq-gpt-120b", "groq-gpt-20b", "groq-qwen"];
 
     return {
       prompt: typeof raw["prompt"] === "string" && raw["prompt"].trim().length > 0

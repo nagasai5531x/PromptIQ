@@ -7,7 +7,7 @@ import { callGroq, missingKey, MODEL as SERVER_MODEL, type GroqFail } from "./gr
 import { logActivity } from "./db.server";
 
 // Display-only copy of the model name (safe for the client bundle).
-export const MODEL = "llama-3.3-70b-versatile";
+export const MODEL = "openai/gpt-oss-120b";
 
 function getGroqKey(): string | undefined {
   if (process.env["GROQ_API_KEY"]?.trim()) return process.env["GROQ_API_KEY"].trim();

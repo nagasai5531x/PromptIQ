@@ -1,6 +1,12 @@
 // Server-only Groq helper. Only imported by *.functions.ts handlers; key passed in from the handler.
-export const MODEL = "llama-3.3-70b-versatile";
-const FALLBACK_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b"];
+export const MODEL = "openai/gpt-oss-120b";
+const FALLBACK_MODELS = [
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "qwen/qwen3.8-27b",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
+];
 
 export type GroqFail = { ok: false; code: "missing_key" | "api_error" | "parse_error"; message: string };
 

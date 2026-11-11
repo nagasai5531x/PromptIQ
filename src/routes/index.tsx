@@ -202,7 +202,7 @@ function Index() {
           ok: true,
           analysis: res.analysisNotes,
           improvedPrompt: res.improvedPrompt,
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
         });
         setShowComparisonSection(true);
 

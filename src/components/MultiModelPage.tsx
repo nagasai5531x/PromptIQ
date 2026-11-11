@@ -36,9 +36,9 @@ export function MultiModelPage() {
     "Explain the difference between optimistic concurrency control and pessimistic locking with a real-world database example in banking.",
   );
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([
-    "groq-llama-70b",
-    "groq-llama-8b",
-    "groq-mixtral",
+    "groq-gpt-120b",
+    "groq-gpt-20b",
+    "groq-qwen",
   ]);
 
   const [isRunning, setIsRunning] = useState(false);

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Users,
@@ -40,6 +41,8 @@ import {
   type TeamActivity,
 } from "@/lib/team.functions";
 import { useLang } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth.context";
+import { setPending } from "@/lib/history";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +51,9 @@ import { PromptIQLayout } from "./PromptIQLayout";
 
 export function TeamsPage() {
   const { t } = useLang();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const getUserTeamsFn = useServerFn(getUserTeams);
   const createTeamFn = useServerFn(createTeam);
   const getMembersFn = useServerFn(getTeamMembers);
@@ -58,17 +64,28 @@ export function TeamsPage() {
   const addCommentFn = useServerFn(addPromptComment);
   const getActivityFn = useServerFn(getTeamActivity);
 
-  // Current logged in user (defaults to seeded demo user Alice Chen)
-  const [currentUser, setCurrentUser] = useState({
-    id: "usr_alice",
-    email: "alice@promptiq.ai",
-    name: "Alice Chen",
-    role: "admin",
-  });
+  // Authenticated user with fallback
+  const currentUser = useMemo(() => {
+    if (user) {
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.fullName || user.email.split("@")[0],
+        role: user.role || "admin",
+      };
+    }
+    return {
+      id: "usr_admin_001",
+      email: "admin@promptiq.ai",
+      name: "Admin Director",
+      role: "admin",
+    };
+  }, [user]);
 
   const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("team_eng");
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"prompts" | "share" | "members" | "activity">("prompts");
+  const [isLoadingTeams, setIsLoadingTeams] = useState<boolean>(true);
 
   // Team data
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -95,8 +112,10 @@ export function TeamsPage() {
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    loadTeams();
-  }, [currentUser]);
+    if (currentUser.id) {
+      loadTeams();
+    }
+  }, [currentUser.id]);
 
   useEffect(() => {
     if (selectedTeamId) {
@@ -105,20 +124,26 @@ export function TeamsPage() {
   }, [selectedTeamId]);
 
   const loadTeams = async () => {
+    setIsLoadingTeams(true);
     try {
       const res = await getUserTeamsFn({ data: { userId: currentUser.id } });
-      if (Array.isArray(res)) {
+      if (Array.isArray(res) && res.length > 0) {
         setTeams(res);
-        if (res.length > 0 && res[0] && !res.some((t: Team) => t.id === selectedTeamId)) {
-          setSelectedTeamId(res[0].id);
+        if (!selectedTeamId || !res.some((t: Team) => t.id === selectedTeamId)) {
+          if (res[0]) setSelectedTeamId(res[0].id);
         }
+      } else {
+        setTeams([]);
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsLoadingTeams(false);
     }
   };
 
   const loadTeamData = async (teamId: string) => {
+    if (!teamId) return;
     try {
       const [mRes, pRes, aRes] = await Promise.all([
         getMembersFn({ data: { teamId } }),
@@ -250,6 +275,10 @@ export function TeamsPage() {
     setTimeout(() => setCopiedPromptId(null), 2000);
   };
 
+  const activeTeam = useMemo(() => {
+    return teams.find((t) => t.id === selectedTeamId) || teams[0];
+  }, [teams, selectedTeamId]);
+
   return (
     <PromptIQLayout
       title={t.team_title}
@@ -263,22 +292,27 @@ export function TeamsPage() {
               <Building2 className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Workspace:</span>
                 <select
                   value={selectedTeamId}
                   onChange={(e) => setSelectedTeamId(e.target.value)}
-                  className="rounded-lg border border-input bg-background px-2.5 py-1 text-xs font-bold text-foreground focus:ring-1 focus:ring-primary"
+                  disabled={isLoadingTeams || teams.length === 0}
+                  className="min-w-[220px] rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-bold text-foreground focus:ring-1 focus:ring-primary cursor-pointer shadow-sm"
                 >
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.userRole})
-                    </option>
-                  ))}
+                  {teams.length === 0 ? (
+                    <option value="">{isLoadingTeams ? "Loading workspaces..." : "No workspaces found"}</option>
+                  ) : (
+                    teams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.userRole.toUpperCase()})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Role: <span className="font-semibold capitalize text-foreground">{currentUser.role}</span> · {members.length} members
+                Role: <span className="font-semibold capitalize text-foreground">{activeTeam?.userRole || currentUser.role}</span> · {members.length} members
               </p>
             </div>
           </div>
@@ -381,12 +415,15 @@ export function TeamsPage() {
 
                   return (
                     <div key={p.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-3">
-                      <div className="flex items-start justify-between">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-display text-sm font-bold text-foreground">{p.title}</h4>
                             <Badge variant="outline" className="text-[10px]">
                               {p.category}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 border-emerald-500/30">
+                              Score: {p.score > 0 ? p.score : 90}/100
                             </Badge>
                           </div>
                           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -394,15 +431,29 @@ export function TeamsPage() {
                             {new Date(p.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyPrompt(p.id, p.prompt)}
-                          className="gap-1.5 text-xs"
-                        >
-                          {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                          Copy Prompt
-                        </Button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setPending(p.prompt, (p.category as any) || "General");
+                              navigate({ to: "/" });
+                            }}
+                            className="gap-1.5 text-xs text-primary hover:text-primary-foreground hover:bg-primary"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Test in Checker
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyPrompt(p.id, p.prompt)}
+                            className="gap-1.5 text-xs"
+                          >
+                            {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                            Copy
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Prompt Content */}
@@ -486,7 +537,13 @@ export function TeamsPage() {
                     onChange={(e) => setShareCategory(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground focus:ring-1 focus:ring-primary"
                   >
+                    <option value="General">General</option>
                     <option value="Engineering">Engineering</option>
+                    <option value="Coding">Coding</option>
+                    <option value="Writing">Writing</option>
+                    <option value="Education">Education</option>
+                    <option value="Research">Research</option>
+                    <option value="Business">Business</option>
                     <option value="Marketing">Marketing</option>
                     <option value="Product">Product</option>
                     <option value="Customer Support">Customer Support</option>

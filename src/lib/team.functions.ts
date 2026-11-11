@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import crypto from "node:crypto";
 import { getDb, hashPassword } from "./db.server";
+import { analyzePrompt } from "./analyzer";
 
 export type User = {
   id: string;
@@ -148,7 +149,7 @@ export const getUserTeams = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<Team[]> => {
     try {
       const db = getDb();
-      const rows = db.prepare(`
+      let rows = db.prepare(`
         SELECT t.id, t.name, t.owner_id as ownerId, tm.role as userRole,
           (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) as memberCount
         FROM teams t
@@ -157,12 +158,52 @@ export const getUserTeams = createServerFn({ method: "POST" })
         ORDER BY t.created_at ASC;
       `).all(data.userId) as any[];
 
+      // If user is not yet part of any team, auto-enroll them in the core engineering team
+      if (rows.length === 0) {
+        const coreTeam = db.prepare("SELECT id, name FROM teams ORDER BY created_at ASC LIMIT 1;").get() as any;
+        if (coreTeam) {
+          const inCore = db.prepare("SELECT id FROM team_members WHERE team_id = ? AND user_id = ?;").get(coreTeam.id, data.userId);
+          if (!inCore) {
+            db.prepare("INSERT OR IGNORE INTO team_members (id, team_id, user_id, role, joined_at) VALUES (?, ?, ?, 'admin', ?);").run(
+              crypto.randomUUID(),
+              coreTeam.id,
+              data.userId,
+              Date.now(),
+            );
+          }
+        } else {
+          const newTeamId = "team_core_001";
+          const now = Date.now();
+          db.prepare("INSERT INTO teams (id, name, owner_id, created_at) VALUES (?, ?, ?, ?);").run(
+            newTeamId,
+            "PromptIQ Engineering Team",
+            data.userId,
+            now,
+          );
+          db.prepare("INSERT INTO team_members (id, team_id, user_id, role, joined_at) VALUES (?, ?, ?, 'admin', ?);").run(
+            crypto.randomUUID(),
+            newTeamId,
+            data.userId,
+            now,
+          );
+        }
+
+        rows = db.prepare(`
+          SELECT t.id, t.name, t.owner_id as ownerId, tm.role as userRole,
+            (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) as memberCount
+          FROM teams t
+          JOIN team_members tm ON tm.team_id = t.id
+          WHERE tm.user_id = ?
+          ORDER BY t.created_at ASC;
+        `).all(data.userId) as any[];
+      }
+
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
         ownerId: r.ownerId,
         memberCount: r.memberCount,
-        userRole: r.userRole,
+        userRole: r.userRole || "admin",
       }));
     } catch {
       return [];
@@ -250,9 +291,12 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: boolean; message: string }> => {
     try {
       const db = getDb();
-      // Check inviter permissions
+      // Check inviter permissions: owner, team admin, or system admin
+      const isOwner = db.prepare("SELECT id FROM teams WHERE id = ? AND owner_id = ?;").get(data.teamId, data.inviterId);
       const inviter = db.prepare("SELECT role FROM team_members WHERE team_id = ? AND user_id = ?;").get(data.teamId, data.inviterId) as any;
-      if (!inviter || inviter.role !== "admin") {
+      const sysUser = db.prepare("SELECT role, name, full_name FROM users WHERE id = ?;").get(data.inviterId) as any;
+
+      if (!isOwner && inviter?.role !== "admin" && sysUser?.role !== "admin") {
         return { ok: false, message: "Only team admins can invite members." };
       }
 
@@ -262,9 +306,9 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
         const newUserId = "usr_" + crypto.randomUUID().slice(0, 8);
         const name = (data.email.split("@")[0] || "User");
         db.prepare(`
-          INSERT INTO users (id, email, password_hash, name, avatar, role, created_at)
-          VALUES (?, ?, ?, ?, ?, 'member', ?);
-        `).run(newUserId, data.email, hashPassword("welcome123"), name, `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`, Date.now());
+          INSERT INTO users (id, email, password_hash, name, full_name, avatar, profile_image, role, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'member', ?, ?);
+        `).run(newUserId, data.email, hashPassword("welcome123"), name, name, `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`, `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`, Date.now(), Date.now());
         targetUser = { id: newUserId, name };
       }
 
@@ -273,12 +317,24 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
         return { ok: false, message: "User is already a member of this team." };
       }
 
+      const now = Date.now();
       db.prepare("INSERT INTO team_members (id, team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?);").run(
         crypto.randomUUID(),
         data.teamId,
         targetUser.id,
         data.role,
-        Date.now(),
+        now,
+      );
+
+      // Log activity
+      db.prepare("INSERT INTO team_activity (id, team_id, user_id, user_name, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?);").run(
+        crypto.randomUUID(),
+        data.teamId,
+        data.inviterId,
+        sysUser?.full_name || sysUser?.name || "Admin",
+        "Invited Member",
+        `Invited ${data.email} as ${data.role}`,
+        now,
       );
 
       return { ok: true, message: `Invited ${data.email} as ${data.role}.` };
@@ -329,27 +385,32 @@ export const sharePromptWithTeam = createServerFn({ method: "POST" })
       prompt: z.string().min(1),
       category: z.string(),
       score: z.number().default(0),
+      tags: z.array(z.string()).optional(),
     }).parse(d),
   )
   .handler(async ({ data }): Promise<{ ok: boolean; promptId?: string; message?: string }> => {
     try {
       const db = getDb();
-      const user = db.prepare("SELECT name FROM users WHERE id = ?;").get(data.userId) as any;
+      const user = db.prepare("SELECT name, full_name FROM users WHERE id = ?;").get(data.userId) as any;
+      const authorName = user?.full_name || user?.name || "Author";
       const promptId = "pr_" + crypto.randomUUID().slice(0, 8);
       const now = Date.now();
+
+      // Compute prompt quality score if not provided
+      const promptScore = data.score > 0 ? data.score : analyzePrompt(data.prompt, data.category as any).total;
 
       db.prepare(`
         INSERT INTO team_prompts (id, team_id, author_id, author_name, title, prompt, category, score, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-      `).run(promptId, data.teamId, data.userId, user?.name || "Author", data.title, data.prompt, data.category, data.score, now, now);
+      `).run(promptId, data.teamId, data.userId, authorName, data.title, data.prompt, data.category, promptScore, now, now);
 
       db.prepare("INSERT INTO team_activity (id, team_id, user_id, user_name, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?);").run(
         crypto.randomUUID(),
         data.teamId,
         data.userId,
-        user?.name || "Author",
+        authorName,
         "Shared Prompt",
-        `Shared prompt '${data.title}' (${data.category})`,
+        `Shared prompt '${data.title}' (${data.category}) with score ${promptScore}/100`,
         now,
       );
 
@@ -390,15 +451,32 @@ export const addPromptComment = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: boolean }> => {
     try {
       const db = getDb();
-      const user = db.prepare("SELECT name FROM users WHERE id = ?;").get(data.userId) as any;
+      const user = db.prepare("SELECT name, full_name FROM users WHERE id = ?;").get(data.userId) as any;
+      const userName = user?.full_name || user?.name || "Member";
+      const now = Date.now();
       db.prepare("INSERT INTO prompt_comments (id, prompt_id, user_id, user_name, comment, created_at) VALUES (?, ?, ?, ?, ?, ?);").run(
         crypto.randomUUID(),
         data.promptId,
         data.userId,
-        user?.name || "Member",
+        userName,
         data.comment,
-        Date.now(),
+        now,
       );
+
+      // Log comment to team activity
+      const prompt = db.prepare("SELECT team_id, title FROM team_prompts WHERE id = ?;").get(data.promptId) as any;
+      if (prompt) {
+        db.prepare("INSERT INTO team_activity (id, team_id, user_id, user_name, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?);").run(
+          crypto.randomUUID(),
+          prompt.team_id,
+          data.userId,
+          userName,
+          "Added Comment",
+          `Commented on '${prompt.title}': "${data.comment.slice(0, 40)}${data.comment.length > 40 ? "..." : ""}"`,
+          now,
+        );
+      }
+
       return { ok: true };
     } catch {
       return { ok: false };

@@ -15,8 +15,10 @@ const TestSuiteSchema = z.object({
   cases: z.array(TestCaseSchema),
 });
 
+export type TestCase = z.infer<typeof TestCaseSchema>;
+
 export type TestSuiteResult =
-  | { ok: true; cases: z.infer<typeof TestCaseSchema>[] }
+  | { ok: true; cases: TestCase[] }
   | { ok: false; message: string };
 
 function getGroqKey(): string | undefined {
@@ -45,7 +47,7 @@ export const generateTestInputs = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<TestSuiteResult> => {
     const key = getGroqKey();
-    const fallbackCases: TestCaseItem[] = [
+    const fallbackCases: TestCase[] = [
       {
         title: "Standard Nominal Case",
         input: `Typical input scenario aligned with: ${data.useCase.slice(0, 100)}`,

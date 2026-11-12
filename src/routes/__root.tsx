@@ -19,7 +19,7 @@ import { LangProvider } from "../lib/i18n";
 import { AuthProvider, useAuth } from "../lib/auth.context";
 import { ThemeProvider } from "../lib/theme.context";
 
-const PUBLIC_ROUTES = ["/login", "/register"];
+const PUBLIC_ROUTES = ["/login", "/register", "/health"];
 
 function AuthGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();

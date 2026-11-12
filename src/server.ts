@@ -80,6 +80,19 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const url = new URL(request.url);
+
+    // Immediate lightweight health check endpoint (0 dependencies on SSR, DB, Auth, or Groq)
+    if (request.method === "GET" && (url.pathname === "/health" || url.pathname === "/healthz" || url.pathname === "/api/health")) {
+      return new Response(JSON.stringify({ status: "ok" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "no-cache, no-store, must-revalidate",
+        },
+      });
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

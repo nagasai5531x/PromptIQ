@@ -4,12 +4,17 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build:node
+    buildCommand: npm install && npm run build
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
       - key: NITRO_PRESET
         value: node-server
+      - key: HOST
+        value: 0.0.0.0
+      - key: NITRO_HOST
+        value: 0.0.0.0
       - key: GROQ_API_KEY
         sync: false

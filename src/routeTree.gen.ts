@@ -19,6 +19,7 @@ import { Route as AttackSimulatorRouteImport } from './routes/attack-simulator'
 import { Route as BuilderRouteImport } from './routes/builder'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EvaluatorRouteImport } from './routes/evaluator'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
@@ -79,6 +80,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const EvaluatorRoute = EvaluatorRouteImport.update({
   id: '/evaluator',
   path: '/evaluator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryRoute = LibraryRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
   '/evaluator': typeof EvaluatorRoute
+  '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
   '/evaluator': typeof EvaluatorRoute
+  '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/builder': typeof BuilderRoute
   '/dashboard': typeof DashboardRoute
   '/evaluator': typeof EvaluatorRoute
+  '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/builder'
     | '/dashboard'
     | '/evaluator'
+    | '/health'
     | '/library'
     | '/login'
     | '/marketplace'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/builder'
     | '/dashboard'
     | '/evaluator'
+    | '/health'
     | '/library'
     | '/login'
     | '/marketplace'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/builder'
     | '/dashboard'
     | '/evaluator'
+    | '/health'
     | '/library'
     | '/login'
     | '/marketplace'
@@ -290,6 +302,7 @@ export interface RootRouteChildren {
   BuilderRoute: typeof BuilderRoute
   DashboardRoute: typeof DashboardRoute
   EvaluatorRoute: typeof EvaluatorRoute
+  HealthRoute: typeof HealthRoute
   LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
   MarketplaceRoute: typeof MarketplaceRoute
@@ -373,6 +386,13 @@ declare module '@tanstack/react-router' {
       path: '/evaluator'
       fullPath: '/evaluator'
       preLoaderRoute: typeof EvaluatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library': {
@@ -466,6 +486,7 @@ const rootRouteChildren: RootRouteChildren = {
   BuilderRoute: BuilderRoute,
   DashboardRoute: DashboardRoute,
   EvaluatorRoute: EvaluatorRoute,
+  HealthRoute: HealthRoute,
   LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,
   MarketplaceRoute: MarketplaceRoute,
